@@ -47,13 +47,13 @@ Questions include problems associated with companies such as:
 
 Goal: **79 SQL Interview Problems**
 
-| # | Company | Status |
-|---|---------|--------|
-| 01 | Meta / Facebook | ⏳ |
-| 02 | Amazon | ⏳ |
-| 03 | Google | ⏳ |
-| 04 | Uber | ⏳ |
-| 05 | Microsoft | ⏳ |
+| # | Company | Problem | Status |
+|---|---------|---------|--------|
+| 01 | Meta / Facebook | [Famous Percentage](solutions/SQL_01_Meta_Famous_Percentage.sql) | ✅ Completed |
+| 02 | Amazon | Coming Soon | ⏳ |
+| 03 | Google | Coming Soon | ⏳ |
+| 04 | Uber | Coming Soon | ⏳ |
+| 05 | Microsoft | Coming Soon | ⏳ |
 
 More problems will be added as I progress.
 
