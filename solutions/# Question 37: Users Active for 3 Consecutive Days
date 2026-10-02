@@ -1,0 +1,303 @@
+# Question 37: Users Active for 3 Consecutive Days
+
+**Difficulty:** Hard  
+**Database:** PostgreSQL  
+**Concepts:** CTE, Window Functions, `LAG()`, `LEAD()`, Date Arithmetic, `DISTINCT`
+
+---
+
+## Problem Statement
+
+You are given a table called `sf_events` containing user activity events.
+
+Find all users who were active for **3 consecutive days or more**.
+
+Return each qualifying `user_id` only once.
+
+---
+
+## Table Schema
+
+```sql
+CREATE TABLE sf_events (
+    event_date TIMESTAMP,
+    account_id VARCHAR(10),
+    user_id VARCHAR(10)
+);
+```
+
+---
+
+## Sample Data
+
+```sql
+INSERT INTO sf_events (event_date, account_id, user_id)
+VALUES
+('2021-01-01', 'A1', 'U1'),
+('2021-01-01', 'A1', 'U2'),
+('2021-01-06', 'A1', 'U3'),
+('2021-01-02', 'A1', 'U1'),
+('2020-12-24', 'A1', 'U2'),
+('2020-12-08', 'A1', 'U1'),
+('2020-12-09', 'A1', 'U1'),
+('2021-01-10', 'A2', 'U4'),
+('2021-01-11', 'A2', 'U4'),
+('2021-01-12', 'A2', 'U4'),
+('2021-01-15', 'A2', 'U5'),
+('2020-12-17', 'A2', 'U4'),
+('2020-12-25', 'A3', 'U6'),
+('2020-12-25', 'A3', 'U6'),
+('2020-12-25', 'A3', 'U6'),
+('2020-12-06', 'A3', 'U7'),
+('2020-12-06', 'A3', 'U6'),
+('2021-01-14', 'A3', 'U6'),
+('2021-02-07', 'A1', 'U1'),
+('2021-02-10', 'A1', 'U2'),
+('2021-02-01', 'A2', 'U4'),
+('2021-02-01', 'A2', 'U5'),
+('2020-12-05', 'A1', 'U8');
+```
+
+---
+
+## Expected Output
+
+```text
+user_id
+-------
+U4
+```
+
+`U4` qualifies because the user was active on:
+
+```text
+2021-01-10
+2021-01-11
+2021-01-12
+```
+
+These are three consecutive calendar days.
+
+---
+
+## PostgreSQL Solution
+
+```sql
+WITH unique_events AS (
+    SELECT DISTINCT
+        user_id,
+        event_date::DATE AS activity_date
+    FROM sf_events
+),
+
+activity AS (
+    SELECT
+        user_id,
+        activity_date,
+
+        LAG(activity_date) OVER (
+            PARTITION BY user_id
+            ORDER BY activity_date
+        ) AS previous_date,
+
+        LEAD(activity_date) OVER (
+            PARTITION BY user_id
+            ORDER BY activity_date
+        ) AS next_date
+
+    FROM unique_events
+)
+
+SELECT DISTINCT user_id
+FROM activity
+WHERE activity_date - previous_date = 1
+  AND next_date - activity_date = 1;
+```
+
+---
+
+## Explanation
+
+### Step 1: Remove Duplicate Activity Dates
+
+```sql
+SELECT DISTINCT
+    user_id,
+    event_date::DATE AS activity_date
+FROM sf_events
+```
+
+We first create one record per user per active day.
+
+This is important because `U6` has three events on:
+
+```text
+2020-12-25
+2020-12-25
+2020-12-25
+```
+
+That does **not** mean the user was active for three consecutive days. It only means the user generated three events on the same day.
+
+After `DISTINCT`, these become a single active date:
+
+```text
+U6 | 2020-12-25
+```
+
+---
+
+### Step 2: Find Previous Activity Date
+
+```sql
+LAG(activity_date) OVER (
+    PARTITION BY user_id
+    ORDER BY activity_date
+)
+```
+
+`LAG()` looks at the previous row for the same user.
+
+For example, for `U4`:
+
+```text
+activity_date    previous_date
+-------------    -------------
+2020-12-17       NULL
+2021-01-10       2020-12-17
+2021-01-11       2021-01-10
+2021-01-12       2021-01-11
+2021-02-01       2021-01-12
+```
+
+---
+
+### Step 3: Find Next Activity Date
+
+```sql
+LEAD(activity_date) OVER (
+    PARTITION BY user_id
+    ORDER BY activity_date
+)
+```
+
+`LEAD()` looks at the next row for the same user.
+
+For `U4`:
+
+```text
+activity_date    next_date
+-------------    ----------
+2020-12-17       2021-01-10
+2021-01-10       2021-01-11
+2021-01-11       2021-01-12
+2021-01-12       2021-02-01
+2021-02-01       NULL
+```
+
+---
+
+### Step 4: Check for Consecutive Days
+
+In PostgreSQL, subtracting two `DATE` values returns the number of days between them.
+
+```sql
+activity_date - previous_date = 1
+```
+
+means:
+
+> The current activity happened exactly one day after the previous activity.
+
+Similarly:
+
+```sql
+next_date - activity_date = 1
+```
+
+means:
+
+> The next activity happened exactly one day after the current activity.
+
+For `U4`:
+
+```text
+previous_date   activity_date   next_date
+-------------   -------------   ----------
+2021-01-10      2021-01-11      2021-01-12
+```
+
+Therefore:
+
+```text
+2021-01-11 - 2021-01-10 = 1
+2021-01-12 - 2021-01-11 = 1
+```
+
+So we have:
+
+```text
+Jan 10 → Jan 11 → Jan 12
+```
+
+which proves that `U4` was active for at least three consecutive days.
+
+---
+
+## Final Output
+
+```text
+user_id
+-------
+U4
+```
+
+---
+
+## Key Interview Concepts
+
+- `LAG()` retrieves a value from the previous row.
+- `LEAD()` retrieves a value from the next row.
+- `PARTITION BY user_id` performs the window calculation independently for each user.
+- `ORDER BY activity_date` puts each user's activity in chronological order.
+- `DISTINCT` prevents multiple events on the same day from being treated as consecutive days.
+- PostgreSQL supports direct subtraction between `DATE` values.
+- `activity_date - previous_date = 1` means the dates are exactly one day apart.
+
+---
+
+## Interview Follow-Up
+
+**Why do we need `DISTINCT` before using `LAG()` and `LEAD()`?**
+
+Because a user can have multiple events on the same date. Without removing duplicates, the previous or next row could contain the same date, causing incorrect consecutive-day calculations.
+
+**Why don't we use `DATEDIFF()`?**
+
+`DATEDIFF()` is commonly used in SQL Server but is not a PostgreSQL function.
+
+In PostgreSQL, we can directly subtract two `DATE` values:
+
+```sql
+date2 - date1
+```
+
+For example:
+
+```sql
+SELECT DATE '2021-01-12' - DATE '2021-01-11';
+```
+
+Output:
+
+```text
+1
+```
+
+So checking:
+
+```sql
+activity_date - previous_date = 1
+```
+
+is enough to determine whether two dates are consecutive.
