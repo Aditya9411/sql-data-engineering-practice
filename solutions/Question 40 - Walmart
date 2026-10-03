@@ -1,0 +1,144 @@
+# SQL Question 38 — Users With Sessions and Orders on the Same Day
+
+## Problem Statement
+
+Identify users who **started a session and placed an order on the same day**.
+
+For each qualifying user and date, calculate:
+
+- `user_id`
+- `session_date`
+- Total number of orders placed on that day
+- Total value of orders placed on that day
+
+### Concepts Tested
+
+- CTE (`WITH`)
+- `JOIN`
+- `DISTINCT`
+- `GROUP BY`
+- `COUNT()`
+- `SUM()`
+- PostgreSQL date casting
+- Avoiding duplicate rows during joins
+
+---
+
+## PostgreSQL Schema
+
+```sql
+DROP TABLE IF EXISTS order_summary;
+DROP TABLE IF EXISTS sessions;
+
+CREATE TABLE sessions (
+    session_id INT PRIMARY KEY,
+    user_id INT,
+    session_date TIMESTAMP
+);
+
+CREATE TABLE order_summary (
+    order_id INT PRIMARY KEY,
+    user_id INT,
+    order_value INT,
+    order_date TIMESTAMP
+);
+```
+
+---
+
+## Dataset
+
+### Sessions
+
+```sql
+INSERT INTO sessions (session_id, user_id, session_date)
+VALUES
+(1, 1, '2024-01-01'),
+(2, 2, '2024-01-02'),
+(3, 3, '2024-01-05'),
+(4, 3, '2024-01-05'),
+(5, 4, '2024-01-03'),
+(6, 4, '2024-01-03'),
+(7, 5, '2024-01-04'),
+(8, 5, '2024-01-04'),
+(9, 3, '2024-01-05'),
+(10, 5, '2024-01-04');
+```
+
+### Orders
+
+```sql
+INSERT INTO order_summary (order_id, user_id, order_value, order_date)
+VALUES
+(1, 1, 152, '2024-01-01'),
+(2, 2, 485, '2024-01-02'),
+(3, 3, 398, '2024-01-05'),
+(4, 3, 320, '2024-01-05'),
+(5, 4, 156, '2024-01-03'),
+(6, 4, 121, '2024-01-03'),
+(7, 5, 238, '2024-01-04'),
+(8, 5, 70, '2024-01-04'),
+(9, 3, 152, '2024-01-05'),
+(10, 5, 171, '2024-01-04');
+```
+
+---
+
+## Solution
+
+```sql
+WITH unique_sessions AS (
+    SELECT DISTINCT
+        user_id,
+        session_date::date AS session_date
+    FROM sessions
+)
+
+SELECT
+    s.user_id,
+    s.session_date,
+    COUNT(o.order_id) AS total_orders,
+    SUM(o.order_value) AS total_order_value
+FROM unique_sessions s
+JOIN order_summary o
+    ON s.user_id = o.user_id
+    AND s.session_date = o.order_date::date
+GROUP BY
+    s.user_id,
+    s.session_date
+ORDER BY
+    s.user_id;
+```
+
+---
+
+## Expected Output
+
+| user_id | session_date | total_orders | total_order_value |
+|--------:|--------------|-------------:|------------------:|
+| 1 | 2024-01-01 | 1 | 152 |
+| 2 | 2024-01-02 | 1 | 485 |
+| 3 | 2024-01-05 | 3 | 870 |
+| 4 | 2024-01-03 | 2 | 277 |
+| 5 | 2024-01-04 | 3 | 479 |
+
+---
+
+## Explanation
+
+### 1. Create Unique Session Days
+
+```sql
+WITH unique_sessions AS (
+    SELECT DISTINCT
+        user_id,
+        session_date::date AS session_date
+    FROM sessions
+)
+```
+
+A user can have multiple sessions on the same day.
+
+For example, User 3 has three sessions on `2024-01-05`.
+
+We only need to know whether the user had a session on that day, so
