@@ -1,0 +1,241 @@
+# Question 45: Top 3 Areas With Highest Customer Density
+
+## Problem Statement
+
+Identify the **top 3 areas with the highest customer density**.
+
+Customer density is calculated as:
+
+**Customer Density = Total Number of Unique Customers in the Area / Area Size**
+
+### Expected Output
+
+The output should contain:
+
+- `area_name`
+- `customer_density`
+
+---
+
+## Concepts Covered
+
+- `JOIN`
+- `GROUP BY`
+- `COUNT(DISTINCT)`
+- Aggregate calculations
+- `ORDER BY`
+- `LIMIT`
+
+---
+
+## PostgreSQL Schema and Dataset
+
+```sql
+DROP TABLE IF EXISTS transaction_records;
+DROP TABLE IF EXISTS stores;
+
+
+-- ============================================
+-- 1. CREATE STORES TABLE
+-- ============================================
+
+CREATE TABLE stores (
+    area_name VARCHAR(20),
+    area_size BIGINT,
+    store_id BIGINT PRIMARY KEY,
+    store_location TEXT,
+    store_open_date TIMESTAMP
+);
+
+
+-- ============================================
+-- 2. INSERT STORES DATA
+-- ============================================
+
+INSERT INTO stores (
+    area_name,
+    area_size,
+    store_id,
+    store_location,
+    store_open_date
+)
+VALUES
+('Downtown', 1000, 1, 'Main Street', '2020-01-01'),
+('Uptown',   1500, 2, 'Park Avenue', '2021-06-15'),
+('Midtown',  1200, 3, 'Broadway', '2019-11-20'),
+('Suburbs',  2000, 4, 'Elm Street', '2018-08-10');
+
+
+-- ============================================
+-- 3. CREATE TRANSACTION RECORDS TABLE
+-- ============================================
+
+CREATE TABLE transaction_records (
+    customer_id BIGINT,
+    store_id BIGINT,
+    transaction_amount BIGINT,
+    transaction_date TIMESTAMP,
+    transaction_id BIGINT PRIMARY KEY
+);
+
+
+-- ============================================
+-- 4. INSERT TRANSACTION DATA
+-- ============================================
+
+INSERT INTO transaction_records (
+    customer_id,
+    store_id,
+    transaction_amount,
+    transaction_date,
+    transaction_id
+)
+VALUES
+(101, 1, 500,  '2024-01-01 10:15:00', 10001),
+(102, 2, 1500, '2024-01-02 12:30:00', 10002),
+(103, 1, 700,  '2024-01-03 14:00:00', 10003),
+(104, 3, 1200, '2024-01-04 09:45:00', 10004),
+(105, 2, 800,  '2024-01-05 11:20:00', 10005);
+```
+
+---
+
+## Solution
+
+```sql
+SELECT
+    s.area_name,
+    COUNT(DISTINCT t.customer_id) * 1.0 / s.area_size
+        AS customer_density
+FROM stores s
+JOIN transaction_records t
+    ON s.store_id = t.store_id
+GROUP BY
+    s.area_name,
+    s.area_size
+ORDER BY
+    customer_density DESC
+LIMIT 3;
+```
+
+---
+
+## Output
+
+| area_name | customer_density |
+|-----------|-----------------:|
+| Downtown | 0.002000 |
+| Uptown | 0.001333 |
+| Midtown | 0.000833 |
+
+---
+
+## Explanation
+
+### Step 1: Join the Tables
+
+```sql
+FROM stores s
+JOIN transaction_records t
+    ON s.store_id = t.store_id
+```
+
+The `stores` table contains the area information, while `transaction_records` contains the customers who made transactions.
+
+We join them using `store_id`.
+
+---
+
+### Step 2: Count Unique Customers
+
+```sql
+COUNT(DISTINCT t.customer_id)
+```
+
+We use `DISTINCT` because the question asks for the **number of unique customers**, not the number of transactions.
+
+For example, if customer `101` makes 5 transactions at the same store, they should still be counted only once.
+
+---
+
+### Step 3: Calculate Customer Density
+
+```sql
+COUNT(DISTINCT t.customer_id) * 1.0 / s.area_size
+```
+
+The formula is:
+
+```text
+Customer Density = Unique Customers / Area Size
+```
+
+Multiplying by `1.0` ensures that decimal division is performed.
+
+For example, Downtown has:
+
+```text
+Unique Customers = 2
+Area Size        = 1000
+
+Customer Density = 2 / 1000
+                 = 0.002
+```
+
+---
+
+### Step 4: Group by Area
+
+```sql
+GROUP BY
+    s.area_name,
+    s.area_size
+```
+
+Since we calculate the number of customers for each area, the records need to be grouped by `area_name`.
+
+`area_size` is also included because it is used in the density calculation.
+
+---
+
+### Step 5: Find the Highest Density Areas
+
+```sql
+ORDER BY customer_density DESC
+LIMIT 3;
+```
+
+`DESC` sorts the customer density from highest to lowest.
+
+`LIMIT 3` returns only the **top 3 areas**.
+
+---
+
+## Final Ranking
+
+```text
+1. Downtown → 0.002000
+2. Uptown   → 0.001333
+3. Midtown  → 0.000833
+```
+
+## Interview Takeaway
+
+When a question asks for a metric such as:
+
+```text
+Unique customers per area
+Unique users per population
+Orders per store size
+Revenue per employee
+```
+
+think about the pattern:
+
+```sql
+JOIN
+→ GROUP BY
+→ Aggregate calculation
+→ ORDER BY DESC
+→ LIMIT
+```
