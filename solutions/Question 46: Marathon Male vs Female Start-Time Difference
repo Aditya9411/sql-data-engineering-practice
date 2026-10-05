@@ -1,0 +1,164 @@
+-- ============================================================
+-- Question 46: Marathon Male vs Female Start-Time Difference
+-- ============================================================
+
+/*
+Problem:
+In a marathon:
+
+- Gun time starts when the race officially begins.
+- Net time starts when the runner crosses the starting line.
+
+Calculate the average absolute difference between gun_time and
+net_time for male and female runners separately.
+
+Then return the absolute difference between those two averages.
+
+Expected Result:
+83.33 seconds
+*/
+
+
+-- ============================================================
+-- 1. CREATE TABLES
+-- ============================================================
+
+DROP TABLE IF EXISTS marathon_male;
+DROP TABLE IF EXISTS marathon_female;
+
+
+CREATE TABLE marathon_male (
+    age BIGINT,
+    div_tot TEXT,
+    gun_time BIGINT,
+    hometown TEXT,
+    net_time BIGINT,
+    num BIGINT,
+    pace BIGINT,
+    person_name TEXT,
+    place BIGINT
+);
+
+
+CREATE TABLE marathon_female (
+    age BIGINT,
+    div_tot TEXT,
+    gun_time BIGINT,
+    hometown TEXT,
+    net_time BIGINT,
+    num BIGINT,
+    pace BIGINT,
+    person_name TEXT,
+    place BIGINT
+);
+
+
+-- ============================================================
+-- 2. INSERT SAMPLE DATA
+-- ============================================================
+
+INSERT INTO marathon_male
+(age, div_tot, gun_time, hometown, net_time, num, pace, person_name, place)
+VALUES
+(25, '1/100', 3600, 'New York', 3400, 101, 500, 'John Doe', 1),
+(30, '2/100', 4000, 'Boston', 3850, 102, 550, 'Michael Smith', 2),
+(22, '3/100', 4200, 'Chicago', 4150, 103, 600, 'David Johnson', 3);
+
+
+INSERT INTO marathon_female
+(age, div_tot, gun_time, hometown, net_time, num, pace, person_name, place)
+VALUES
+(28, '1/100', 3650, 'San Francisco', 3600, 201, 510, 'Jane Doe', 1),
+(26, '2/100', 3900, 'Los Angeles', 3850, 202, 530, 'Emily Davis', 2),
+(24, '3/100', 4100, 'Seattle', 4050, 203, 590, 'Anna Brown', 3);
+
+
+-- ============================================================
+-- 3. SOLUTION
+-- ============================================================
+
+WITH runners AS (
+
+    -- Combine male and female runners
+    SELECT
+        gun_time,
+        net_time,
+        'male' AS gender
+    FROM marathon_male
+
+    UNION ALL
+
+    SELECT
+        gun_time,
+        net_time,
+        'female' AS gender
+    FROM marathon_female
+),
+
+avg_by_gender AS (
+
+    -- Calculate average gun-time vs net-time difference
+    -- for each gender
+    SELECT
+        gender,
+        AVG(ABS(gun_time - net_time)) AS avg_difference
+    FROM runners
+    GROUP BY gender
+)
+
+-- Compare male and female averages
+SELECT
+    ROUND(
+        ABS(
+            MAX(CASE
+                WHEN gender = 'male'
+                THEN avg_difference
+            END)
+            -
+            MAX(CASE
+                WHEN gender = 'female'
+                THEN avg_difference
+            END)
+        ),
+        2
+    ) AS final_difference
+FROM avg_by_gender;
+
+
+/*
+Expected Output:
+
+final_difference
+----------------
+83.33
+*/
+
+
+-- ============================================================
+-- Explanation
+-- ============================================================
+
+/*
+Step 1:
+Combine male and female runners using UNION ALL.
+
+Step 2:
+For every runner:
+
+    ABS(gun_time - net_time)
+
+Step 3:
+Calculate the average difference for each gender:
+
+    Female = 50.00 seconds
+    Male   = 133.33 seconds
+
+Step 4:
+Calculate the absolute difference:
+
+    ABS(133.33 - 50.00)
+
+Final Answer:
+
+    83.33 seconds
+*/
