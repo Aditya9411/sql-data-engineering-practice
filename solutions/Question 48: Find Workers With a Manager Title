@@ -1,0 +1,182 @@
+-- ============================================================
+-- Question 48: Find Workers With a Manager Title
+-- ============================================================
+
+/*
+Problem:
+Find all workers whose job title contains the word "Manager".
+
+Return:
+- first_name
+- worker_title
+
+The title matching should be case-insensitive.
+
+Concepts Practiced:
+- INNER JOIN
+- Foreign Key relationship
+- WHERE clause
+- LOWER()
+- LIKE
+- Pattern matching
+*/
+
+
+-- ============================================================
+-- TABLE 1: workers
+-- ============================================================
+
+CREATE TABLE workers (
+    department VARCHAR(100),
+    first_name VARCHAR(50),
+    joining_date DATE,
+    last_name VARCHAR(50),
+    salary BIGINT,
+    worker_id BIGINT PRIMARY KEY
+);
+
+
+-- ============================================================
+-- INSERT DATA INTO workers
+-- ============================================================
+
+INSERT INTO workers
+(department, first_name, joining_date, last_name, salary, worker_id)
+VALUES
+('HR', 'Alice', '2020-01-15', 'Smith', 60000, 1),
+('Engineering', 'Bob', '2019-03-10', 'Johnson', 80000, 2),
+('Sales', 'Charlie', '2021-07-01', 'Brown', 50000, 3),
+('Engineering', 'David', '2018-12-20', 'Wilson', 90000, 4),
+('Marketing', 'Emma', '2020-06-30', 'Taylor', 70000, 5);
+
+
+-- ============================================================
+-- TABLE 2: titles
+-- ============================================================
+
+CREATE TABLE titles (
+    affected_from DATE,
+    worker_ref_id BIGINT,
+    worker_title VARCHAR(100),
+
+    FOREIGN KEY (worker_ref_id)
+        REFERENCES workers(worker_id)
+);
+
+
+-- ============================================================
+-- INSERT DATA INTO titles
+-- ============================================================
+
+INSERT INTO titles
+(affected_from, worker_ref_id, worker_title)
+VALUES
+('2020-01-15', 1, 'HR Manager'),
+('2019-03-10', 2, 'Software Engineer'),
+('2021-07-01', 3, 'Sales Representative'),
+('2018-12-20', 4, 'Engineering Manager'),
+('2020-06-30', 5, 'Marketing Specialist'),
+('2022-01-01', 5, 'Marketing Manager');
+
+
+-- ============================================================
+-- SOLUTION
+-- ============================================================
+
+SELECT
+    w.first_name,
+    t.worker_title
+FROM workers AS w
+JOIN titles AS t
+    ON w.worker_id = t.worker_ref_id
+WHERE LOWER(t.worker_title) LIKE '%manager%';
+
+
+-- ============================================================
+-- EXPECTED OUTPUT
+-- ============================================================
+
+/*
+ first_name |     worker_title
+------------+------------------------
+ Alice      | HR Manager
+ David      | Engineering Manager
+ Emma       | Marketing Manager
+*/
+
+
+-- ============================================================
+-- EXPLANATION
+-- ============================================================
+
+/*
+1. workers AS w
+   Contains worker information such as name, department,
+   salary, and worker_id.
+
+2. titles AS t
+   Contains the job titles of workers.
+
+3. JOIN:
+   
+   w.worker_id = t.worker_ref_id
+
+   connects each worker with their corresponding job title.
+
+4. LOWER(t.worker_title)
+   
+   Converts the title to lowercase.
+
+   Example:
+   'HR Manager' -> 'hr manager'
+
+5. LIKE '%manager%'
+
+   Searches for the word "manager" anywhere inside the title.
+
+   % means zero or more characters.
+
+   Therefore:
+
+   'HR Manager'          -> Match
+   'Engineering Manager' -> Match
+   'Marketing Manager'   -> Match
+   'Software Engineer'   -> No Match
+
+*/
+
+
+-- ============================================================
+-- POSTGRESQL ALTERNATIVE
+-- ============================================================
+
+/*
+PostgreSQL also provides ILIKE for case-insensitive matching.
+
+Therefore, we can write:
+*/
+
+SELECT
+    w.first_name,
+    t.worker_title
+FROM workers AS w
+JOIN titles AS t
+    ON w.worker_id = t.worker_ref_id
+WHERE t.worker_title ILIKE '%manager%';
+
+
+-- ============================================================
+-- KEY TAKEAWAY
+-- ============================================================
+
+/*
+INNER JOIN  -> Connect related rows from two tables
+
+LOWER()     -> Convert text to lowercase
+
+LIKE        -> Pattern matching
+
+%manager%   -> "manager" can appear anywhere in the string
+
+ILIKE       -> PostgreSQL-specific case-insensitive LIKE
+*/
