@@ -1,0 +1,227 @@
+# IBM SQL Interview Question — Customer Interactions and Content Count
+
+**Company:** IBM  
+**Difficulty:** Medium  
+**Database:** PostgreSQL  
+**Concepts:** FULL OUTER JOIN, COALESCE, COUNT(DISTINCT), GROUP BY, CTE
+
+## Problem Statement
+
+Calculate the total number of interactions and the total number of content items created for each customer.
+
+Include all interaction types and content types in your calculations.
+
+### Expected Columns
+
+- `customer_id` — Unique customer identifier
+- `total_interactions` — Total interactions performed by the customer
+- `total_contents` — Total content items created by the customer
+
+**Important:** Customers should be included even if they have interactions but no content, or content but no interactions.
+
+## 1. Create Tables
+
+```sql
+DROP TABLE IF EXISTS customer_interactions;
+DROP TABLE IF EXISTS user_contents;
+
+CREATE TABLE customer_interactions (
+    customer_id BIGINT,
+    interaction_date TIMESTAMP,
+    interaction_id BIGINT,
+    interaction_type VARCHAR(50)
+);
+
+CREATE TABLE user_contents (
+    content_id BIGINT,
+    content_text VARCHAR(255),
+    content_type VARCHAR(50),
+    customer_id BIGINT
+);
+```
+
+## 2. Insert Sample Data
+
+```sql
+INSERT INTO customer_interactions
+(customer_id, interaction_date, interaction_id, interaction_type)
+VALUES
+(1, '2023-01-15 10:30:00', 101, 'Click'),
+(1, '2023-01-16 11:00:00', 102, 'Purchase'),
+(2, '2023-01-17 14:45:00', 103, 'View'),
+(3, '2023-01-18 09:20:00', 104, 'Share'),
+(3, '2023-01-18 09:25:00', 105, 'Like'),
+(4, '2023-01-19 12:10:00', 106, 'Comment');
+
+INSERT INTO user_contents
+(content_id, content_text, content_type, customer_id)
+VALUES
+(201, 'Welcome Post', 'Blog', 1),
+(202, 'Product Review', 'Review', 2),
+(203, 'Event Photos', 'Photo', 3),
+(204, 'Tutorial Video', 'Video', 3),
+(205, 'Survey Response', 'Survey', 4);
+```
+
+## 3. SQL Solution — FULL OUTER JOIN
+
+```sql
+SELECT
+    COALESCE(ci.customer_id, uc.customer_id) AS customer_id,
+    COUNT(DISTINCT ci.interaction_id) AS total_interactions,
+    COUNT(DISTINCT uc.content_id) AS total_contents
+FROM customer_interactions ci
+FULL OUTER JOIN user_contents uc
+    ON ci.customer_id = uc.customer_id
+GROUP BY
+    COALESCE(ci.customer_id, uc.customer_id)
+ORDER BY customer_id;
+```
+
+## 4. Expected Output
+
+| customer_id | total_interactions | total_contents |
+|-------------|--------------------|----------------|
+| 1 | 2 | 1 |
+| 2 | 1 | 1 |
+| 3 | 2 | 2 |
+| 4 | 1 | 1 |
+
+**Total rows returned: 4**
+
+## 5. SQL Explanation
+
+### Why FULL OUTER JOIN?
+
+A customer might:
+
+- Perform interactions without creating content.
+- Create content without performing interactions.
+- Have both interactions and content.
+
+`FULL OUTER JOIN` includes customers from both tables, ensuring no customer is missed.
+
+### Why COALESCE?
+
+```sql
+COALESCE(ci.customer_id, uc.customer_id)
+```
+
+COALESCE returns the first non-NULL value.
+
+If a customer exists in only one table, COALESCE retrieves their customer ID from that table.
+
+### Why COUNT(DISTINCT)?
+
+Joining two tables can multiply rows when a customer has multiple interactions and multiple content items.
+
+For example, customer 3 has:
+
+- 2 interactions
+- 2 content items
+
+After the JOIN, this produces 4 rows.
+
+```sql
+COUNT(DISTINCT ci.interaction_id)
+```
+
+Ensures each interaction ID is counted only once.
+
+```sql
+COUNT(DISTINCT uc.content_id)
+```
+
+Ensures each content ID is counted only once.
+
+### Why GROUP BY?
+
+```sql
+GROUP BY COALESCE(ci.customer_id, uc.customer_id)
+```
+
+Groups records by customer so that the counts are calculated separately for each customer.
+
+## 6. Alternative Solution — CTE and Pre-Aggregation
+
+```sql
+WITH interactions AS (
+    SELECT
+        customer_id,
+        COUNT(*) AS total_interactions
+    FROM customer_interactions
+    GROUP BY customer_id
+),
+contents AS (
+    SELECT
+        customer_id,
+        COUNT(*) AS total_contents
+    FROM user_contents
+    GROUP BY customer_id
+)
+SELECT
+    COALESCE(i.customer_id, c.customer_id) AS customer_id,
+    COALESCE(i.total_interactions, 0) AS total_interactions,
+    COALESCE(c.total_contents, 0) AS total_contents
+FROM interactions i
+FULL OUTER JOIN contents c
+    ON i.customer_id = c.customer_id
+ORDER BY customer_id;
+```
+
+This solution counts rows before joining, assuming each row represents a distinct interaction or content item.
+
+### Why Is This Approach Useful?
+
+1. Prevents row multiplication during the JOIN.
+2. Makes the query easier to maintain.
+3. Can improve performance on large datasets by reducing the number of rows joined.
+4. Uses COALESCE to return 0 for missing counts.
+
+## 7. Key Interview Learnings
+
+| Concept | Purpose |
+|---------|---------|
+| FULL OUTER JOIN | Includes customers from both tables |
+| COALESCE | Handles NULL values |
+| COUNT(DISTINCT) | Prevents duplicate counting after joins |
+| GROUP BY | Aggregates data for each customer |
+| CTE | Breaks complex SQL into readable steps |
+| Pre-Aggregation | Reduces join multiplication |
+
+## 8. Interview Follow-Up Questions
+
+**Q1. Why not use INNER JOIN?**
+
+INNER JOIN would exclude customers who exist in only one table.
+
+**Q2. Why not use LEFT JOIN?**
+
+LEFT JOIN would miss customers who exist only in the content table.
+
+**Q3. Why use COUNT(DISTINCT) instead of COUNT(*)?**
+
+A JOIN can multiply records. COUNT(DISTINCT) counts each non-NULL ID only once.
+
+**Q4. Which approach is better for large datasets?**
+
+Pre-aggregation using CTEs can be more efficient because it reduces the number of rows before joining. Actual performance depends on the data and execution plan.
+
+**Q5. What happens if a customer has no content?**
+
+The customer is still included, and the content count becomes 0.
+
+## Final Takeaway
+
+When joining multiple one-to-many tables, always check for row multiplication.
+
+Two common solutions are:
+
+1. `COUNT(DISTINCT ...)` after joining.
+2. Aggregate each table first, then JOIN the results.
+
+Both are important SQL techniques for Data Engineering interviews.
+
+---
+
+**Topics:** SQL, PostgreSQL, Data Engineering, SQL Interview Questions, Joins, Aggregations, CTEs
