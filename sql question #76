@@ -1,0 +1,110 @@
+# SQL Interview Question 76: Compare Two Tables and Find Differences
+
+## Problem Statement
+
+In Data Engineering, we often need to compare source and target tables to identify missing records or changed values.
+
+**Task:** Write a SQL query to find records where any column differs between two tables, including records missing from either table.
+
+**Concepts:** `FULL OUTER JOIN`, `IS DISTINCT FROM`, `COALESCE`
+
+**Database:** PostgreSQL
+
+## 1. Create Tables
+
+```sql
+CREATE TABLE source_customers (
+    id INT PRIMARY KEY,
+    name VARCHAR(50),
+    city VARCHAR(50),
+    salary INT
+);
+
+CREATE TABLE target_customers (
+    id INT PRIMARY KEY,
+    name VARCHAR(50),
+    city VARCHAR(50),
+    salary INT
+);
+```
+
+## 2. Insert Sample Data
+
+```sql
+INSERT INTO source_customers VALUES
+(1, 'Rahul', 'Delhi', 50000),
+(2, 'Priya', 'Mumbai', 60000),
+(3, 'Amit', 'Pune', 45000),
+(4, 'Neha', 'Delhi', 70000),
+(5, 'Ravi', NULL, 55000);
+
+INSERT INTO target_customers VALUES
+(1, 'Rahul', 'Delhi', 50000),
+(2, 'Priya', 'Mumbai', 65000),
+(3, 'Amit', 'Bangalore', 45000),
+(5, 'Ravi', 'Chennai', 55000),
+(6, 'Karan', 'Hyderabad', 80000);
+```
+
+## 3. SQL Solution
+
+```sql
+SELECT
+    COALESCE(s.id, t.id) AS customer_id,
+    s.name AS source_name,
+    t.name AS target_name,
+    s.city AS source_city,
+    t.city AS target_city,
+    s.salary AS source_salary,
+    t.salary AS target_salary
+FROM source_customers s
+FULL OUTER JOIN target_customers t
+    ON s.id = t.id
+WHERE s.id IS NULL
+   OR t.id IS NULL
+   OR s.name IS DISTINCT FROM t.name
+   OR s.city IS DISTINCT FROM t.city
+   OR s.salary IS DISTINCT FROM t.salary
+ORDER BY customer_id;
+```
+
+## 4. Expected Output
+
+| customer_id | source_name | target_name | source_city | target_city | source_salary | target_salary |
+|---|---|---|---|---|---|---|
+| 2 | Priya | Priya | Mumbai | Mumbai | 60000 | 65000 |
+| 3 | Amit | Amit | Pune | Bangalore | 45000 | 45000 |
+| 4 | Neha | NULL | Delhi | NULL | 70000 | NULL |
+| 5 | Ravi | Ravi | NULL | Chennai | 55000 | 55000 |
+| 6 | NULL | Karan | NULL | Hyderabad | NULL | 80000 |
+
+**Total: 5 records with differences.**
+
+## 5. Explanation
+
+- **FULL OUTER JOIN:** Returns all records from both tables, including unmatched records.
+- **IS DISTINCT FROM:** Compares column values and handles NULL values correctly.
+- **COALESCE:** Returns the first non-NULL ID, giving us one customer ID column.
+- **OR:** Ensures a row is returned even if only one column differs.
+- **WHERE s.id IS NULL OR t.id IS NULL:** Identifies records missing from either table.
+
+## 6. Differences Identified
+
+- Customer 2: Salary changed from 60000 to 65000.
+- Customer 3: City changed from Pune to Bangalore.
+- Customer 4: Missing from target table.
+- Customer 5: City changed from NULL to Chennai.
+- Customer 6: Missing from source table.
+
+Customer 1 is excluded because all column values match.
+
+## 7. Real-World Use Case
+
+This technique is useful for:
+
+- Validating source and target data after ETL processing.
+- Checking data consistency after migration.
+- Identifying missing records.
+- Detecting changed values between datasets.
+
+**Key Takeaway:** `FULL OUTER JOIN` combined with `IS DISTINCT FROM` is a useful approach for comparing source and target tables when the goal is to identify missing or changed records.
