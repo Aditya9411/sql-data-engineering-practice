@@ -1,0 +1,56 @@
+SQL Interview Question 77: Cumulative Distribution of Salaries (PostgreSQL)
+Interview Question
+Calculate the cumulative distribution (CDF) of employee salaries using PostgreSQL. Return each employee's name, salary, and cumulative distribution (salary_cdf), ordered from lowest to highest salary.
+Sample Data
+employee_id	name	department	salary
+101	Aditya	Data Engineering	80000
+102	Rahul	Data Engineering	60000
+103	Priya	Analytics	70000
+104	Aman	Data Engineering	90000
+105	Neha	Analytics	50000
+106	Rohit	Finance	65000
+107	Sneha	Finance	75000
+108	Karan	Data Engineering	85000
+109	Pooja	Analytics	55000
+110	Vikas	Finance	60000
+
+
+Run the Complete Example
+Execute [`complete_example.sql`](complete_example.sql) in PostgreSQL or pgAdmin. It drops the existing employees table, creates it, inserts the sample records, and runs the solution.
+Note: The script uses DROP TABLE IF EXISTS employees, which deletes any existing table of that name and its data. Run it in a practice database.
+
+SQL Solution
+SELECT
+    name,
+    salary,
+    ROUND(
+        CUME_DIST() OVER (ORDER BY salary)::numeric,
+        2
+    ) AS salary_cdf
+FROM employees
+ORDER BY salary, name;
+Expected Output
+name	salary	salary_cdf
+Neha	50000	0.10
+Pooja	55000	0.20
+Rahul	60000	0.40
+Vikas	60000	0.40
+Rohit	65000	0.50
+Priya	70000	0.60
+Sneha	75000	0.70
+Aditya	80000	0.80
+Karan	85000	0.90
+Aman	90000	1.00
+
+
+Explanation
+CUME_DIST() is a PostgreSQL window function that returns the proportion of rows with a salary less than or equal to the current row's salary:
+
+number of employees with salary <= current salary / total employees
+
+For example, 4 of 10 employees earn 60,000 or less, so both Rahul and Vikas have salary_cdf = 0.40. Tied salaries receive the same cumulative distribution. ROUND(...::numeric, 2) formats the result to two decimal places.
+Real-World Uses
+- Salary distribution analysis
+- Customer spending distribution
+- Sales performance benchmarking
+Database: PostgreSQL | Topic: Window Functions | Difficulty: Intermediate
