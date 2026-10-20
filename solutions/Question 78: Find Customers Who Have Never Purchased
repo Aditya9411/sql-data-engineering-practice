@@ -1,0 +1,124 @@
+
+-- =====================================================
+-- Question 78: Find Customers Who Have Never Purchased
+-- Topic: LEFT JOIN, NOT EXISTS, SQL Anti-Join
+-- Difficulty: Easy
+-- =====================================================
+
+-- Problem Statement:
+-- Write a SQL query to find customers who have
+-- never made a purchase.
+--
+-- Tables:
+-- customers(customer_id, name)
+-- sales(sale_id, customer_id, amount)
+
+-- =====================================================
+-- Step 1: Create Tables
+-- =====================================================
+
+DROP TABLE IF EXISTS sales;
+DROP TABLE IF EXISTS customers;
+
+CREATE TABLE customers (
+    customer_id INT PRIMARY KEY,
+    name VARCHAR(50)
+);
+
+CREATE TABLE sales (
+    sale_id INT PRIMARY KEY,
+    customer_id INT,
+    amount DECIMAL(10,2),
+    FOREIGN KEY (customer_id)
+        REFERENCES customers(customer_id)
+);
+
+-- =====================================================
+-- Step 2: Insert Sample Data
+-- =====================================================
+
+INSERT INTO customers VALUES
+(101, 'Aditya'),
+(102, 'Rahul'),
+(103, 'Priya'),
+(104, 'Aman'),
+(105, 'Neha'),
+(106, 'Rohit'),
+(107, 'Sneha'),
+(108, 'Karan');
+
+INSERT INTO sales VALUES
+(1, 101, 5000),
+(2, 102, 3000),
+(3, 103, 7000),
+(4, 101, 2000),
+(5, 105, 4500),
+(6, 108, 6000);
+
+-- =====================================================
+-- Step 3: View Tables
+-- =====================================================
+
+SELECT * FROM customers;
+SELECT * FROM sales;
+
+-- =====================================================
+-- Solution 1: Using LEFT JOIN
+-- =====================================================
+
+SELECT
+    c.customer_id,
+    c.name
+FROM customers c
+LEFT JOIN sales s
+    ON c.customer_id = s.customer_id
+WHERE s.sale_id IS NULL;
+
+-- Explanation:
+-- LEFT JOIN keeps all customers.
+-- Customers without matching sales have NULL
+-- values in the sales columns.
+-- WHERE s.sale_id IS NULL identifies those customers.
+
+-- =====================================================
+-- Solution 2: Using NOT EXISTS
+-- =====================================================
+
+SELECT
+    c.customer_id,
+    c.name
+FROM customers c
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM sales s
+    WHERE s.customer_id = c.customer_id
+);
+
+-- Explanation:
+-- NOT EXISTS checks whether a matching sale exists.
+-- SELECT 1 is used because only row existence matters.
+-- Customers without matching sales are returned.
+
+-- =====================================================
+-- Expected Output
+-- =====================================================
+
+-- customer_id | name
+-- ------------|--------
+-- 104         | Aman
+-- 106         | Rohit
+-- 107         | Sneha
+
+-- =====================================================
+-- Real-World Use Cases
+-- =====================================================
+
+-- 1. Identify customers who have never purchased.
+-- 2. Find users without any transactions.
+-- 3. Detect missing records during ETL validation.
+-- 4. Identify products that have never been ordered.
+
+-- Interview Takeaway:
+-- LEFT JOIN + IS NULL and NOT EXISTS are two common
+-- approaches for finding unmatched records.
+-- NOT EXISTS is often a clear way to express an anti-join.
