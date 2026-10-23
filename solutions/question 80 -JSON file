@@ -1,0 +1,39 @@
+
+-- Question 80: Aggregate Employee Names into a JSON Array by Department
+-- Database: PostgreSQL
+-- Topic: GROUP BY, JSON_AGG()
+
+-- Problem Statement:
+-- Write a SQL query to group employees by department and
+-- return employee names as a JSON array for each department.
+
+-- Step 1: Create the employees table
+DROP TABLE IF EXISTS employees;
+
+CREATE TABLE employees (
+    employee_id INT PRIMARY KEY,
+    name VARCHAR(100),
+    department_id INT
+);
+
+-- Step 2: Insert sample data
+INSERT INTO employees (employee_id, name, department_id)
+VALUES
+(1, 'John', 10),
+(2, 'Alice', 20),
+(3, 'Bob', 10),
+(4, 'Sarah', 20),
+(5, 'Mike', 10),
+(6, 'David', 30),
+(7, 'Emma', 20),
+(8, 'Robert', 30),
+(9, 'Sophia', 10),
+(10, 'James', 30);
+
+-- Step 3: Solution
+SELECT
+    department_id,
+    JSON_AGG(name ORDER BY employee_id) AS employee_names
+FROM employees
+GROUP BY department_id
+ORDER BY department_id;
