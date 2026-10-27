@@ -1,0 +1,40 @@
+SQL Question 80: Running Total of Sales Per Customer
+Problem
+Write a SQL query to calculate the running total of sales for each customer, ordered by sale date.
+Concepts
+- Window functions (SUM() OVER())
+- PARTITION BY
+- ORDER BY
+- Window frame: ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+How to Run
+Execute [`question_32_running_total.sql`](question_32_running_total.sql) in PostgreSQL, MySQL 8+, or SQL Server. It creates a sales table, inserts 10 example records, and calculates the running total. Run the setup once in a fresh database; running it again without dropping the table will raise a table-already-exists error.
+Solution
+SELECT
+    customer_id,
+    sale_date,
+    amount,
+    SUM(amount) OVER (
+        PARTITION BY customer_id
+        ORDER BY sale_date, sale_id
+        ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+    ) AS running_total
+FROM sales
+ORDER BY customer_id, sale_date, sale_id;
+Expected Output
+customer_id	sale_date	amount	running_total
+101	2025-01-01	200.00	200.00
+101	2025-01-03	300.00	500.00
+101	2025-01-07	400.00	900.00
+101	2025-01-12	150.00	1050.00
+102	2025-01-01	500.00	500.00
+102	2025-01-05	250.00	750.00
+102	2025-01-10	100.00	850.00
+103	2025-01-04	150.00	150.00
+103	2025-01-08	350.00	500.00
+103	2025-01-15	200.00	700.00
+
+
+Explanation
+PARTITION BY customer_id calculates a separate running total for each customer. ORDER BY sale_date, sale_id sorts sales chronologically and resolves ties when multiple sales happen on the same date. The ROWS frame sums every row from the beginning of that customer's partition through the current sale.
+
+Interview tip: Unlike GROUP BY, a window function preserves each sale row while adding its cumulative total.
