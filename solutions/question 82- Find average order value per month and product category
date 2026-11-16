@@ -1,0 +1,32 @@
+question 82- Find average order value per month and product category
+CREATE TABLE orders (
+    order_id INT PRIMARY KEY,
+    order_date DATE,
+    category_id INT,
+    order_value DECIMAL(10,2)
+);
+
+
+INSERT INTO orders (order_id, order_date, category_id, order_value)
+VALUES
+(1, '2025-01-05', 101, 500),
+(2, '2025-01-10', 101, 700),
+(3, '2025-01-15', 102, 300),
+(4, '2025-01-20', 102, 500),
+(5, '2025-01-25', 103, 1000),
+(6, '2025-02-03', 101, 800),
+(7, '2025-02-12', 101, 600),
+(8, '2025-02-18', 102, 400),
+(9, '2025-02-22', 102, 600),
+(10, '2025-02-25', 103, 1200),
+(11, '2025-03-05', 101, 900),
+(12, '2025-03-10', 101, 1100),
+(13, '2025-03-15', 102, 700),
+(14, '2025-03-20', 102, 900),
+(15, '2025-03-25', 103, 1500);
+
+select DATE_TRUNC ('month',order_date) as order_month,category_id,avg(order_value) as avg_order_value
+from orders
+GROUP by order_month,category_id;
+
+
